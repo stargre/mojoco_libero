@@ -85,17 +85,19 @@ class SkillLibrary:
 
     def _set_gripper(self, opened):
         command = -1.0 if opened else 1.0
-        steps = self.gripper_steps
-        for index in range(steps):
+        steps = max(0, self.gripper_steps)
+        executed = 0
+        for _ in range(steps):
             action = np.zeros(self.env.action_dim, dtype=np.float32)
             action[6] = command
             result = self._step(action)
+            executed += 1
             if result.get("success"):
                 break
         return {
-            "success": True,
+            "success": executed > 0,
             "status": "gripper_opened" if opened else "gripper_closed",
-            "steps": index + 1 if steps else 0,
+            "steps": executed,
         }
 
     def _wait(self, steps=12):
