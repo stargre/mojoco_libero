@@ -13,7 +13,9 @@ class CandidateGenerator:
             "name": name,
             "args": dict(args),
             "goal_index": int(goal_index),
-            "goal_predicate": predicate.to_dict(),
+            "goal_predicate": (
+                predicate.to_dict() if hasattr(predicate, "to_dict") else copy.deepcopy(predicate)
+            ),
         }
         payload["id"] = "{}:{}:{}".format(
             name, goal_index,
