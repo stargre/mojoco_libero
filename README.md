@@ -6,7 +6,7 @@
 
 ## 1. 为什么使用独立环境
 
-官方 LIBERO README 推荐 Python 3.8.13，并固定了较老版本的 robosuite、Gym、NumPy 和 PyTorch。为了避免破坏原来的 mojoco 环境，也避免和 mujoco_saycan 的 Python 3.11 环境发生依赖冲突，本项目使用独立 Conda 环境 libero-saycan。
+官方 LIBERO README 推荐 Python 3.8.13，并固定了较老版本的 robosuite、Gym、NumPy 和 PyTorch。为了避免破坏原来的 MuJoCo 环境，也避免和 mujoco_saycan 的 Python 3.11 环境发生依赖冲突，本项目使用独立 Conda 环境 libero-saycan。
 
 当前参考依赖：
 
@@ -44,9 +44,10 @@ export PYOPENGL_PLATFORM=egl
 export MUJOCO_EGL_DEVICE_ID=0
 ~~~
 
-建议先检查安装：
+先运行与 LIBERO 无关的工具单测，再检查安装：
 
 ~~~bash
+python -m unittest discover -s tests -v
 python scripts/check_install.py
 ~~~
 
