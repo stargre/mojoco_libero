@@ -21,7 +21,7 @@ class BeliefState:
     def refresh(self, snapshot, goal_status):
         self.objects = copy.deepcopy(snapshot.get("objects", {}))
         self.robot = copy.deepcopy(snapshot.get("robot", {}))
-        if snapshot.get("held_object") is not None:
+        if "held_object" in snapshot:
             self.held_object = snapshot.get("held_object")
         self.goal_status = copy.deepcopy(goal_status or [])
         self.revision += 1

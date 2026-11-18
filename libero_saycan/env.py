@@ -493,6 +493,30 @@ class LiberoTaskEnv:
             + axis * np.dot(axis, vector) * (1.0 - np.cos(angle))
         )
 
+    def infer_held_object(self):
+        """Infer a held object from gripper closure and simulator-side proximity."""
+        robot = self.get_robot_state()
+        gripper = np.asarray(robot.get("gripper_qpos", []), dtype=float)
+        eef = np.asarray(robot.get("eef_position", []), dtype=float)
+        if gripper.size == 0 or eef.shape != (3,):
+            return None
+        # PandaGripper qpos approaches zero when closed and is around +/-0.02
+        # when open. Proximity disambiguates an empty closed gripper.
+        if float(np.mean(np.abs(gripper))) > 0.015:
+            return None
+        nearest_name = None
+        nearest_distance = float("inf")
+        for name in self.domain.objects_dict.keys():
+            try:
+                position = self.get_object_position(name)
+                distance = float(np.linalg.norm(position - eef))
+            except Exception:
+                continue
+            if distance < 0.11 and distance < nearest_distance:
+                nearest_name = str(name)
+                nearest_distance = distance
+        return nearest_name
+
     def get_state_snapshot(self):
         objects = {}
         for name, state in self.domain.object_states_dict.items():
@@ -560,7 +584,7 @@ class LiberoTaskEnv:
         return {
             "objects": objects,
             "robot": self.get_robot_state(),
-            "held_object": None,
+            "held_object": self.infer_held_object(),
         }
 
     @property
