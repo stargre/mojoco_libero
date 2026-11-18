@@ -57,6 +57,8 @@ def configure_libero():
             "PyYAML is missing. Install the official LIBERO requirements first."
         ) from exc
 
+    required_dirs["datasets"].mkdir(parents=True, exist_ok=True)
+
     config_file = config_dir / "config.yaml"
     config = {key: str(path) for key, path in required_dirs.items()}
     config_file.write_text(

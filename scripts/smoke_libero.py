@@ -74,10 +74,11 @@ def main():
     try:
         initial_observation = env.observation
         frames.append(camera_frame(initial_observation, "agentview_image"))
+        episode_success = bool(env.check_success())
         imageio.imwrite(str(output_dir / "initial_agentview.png"), frames[0])
 
         neutral_action = np.zeros(env.action_dim, dtype=np.float32)
-        for _ in range(args.steps):
+        for _ in range(0 if episode_success else args.steps):
             result = env.step(neutral_action)
             executed_steps += 1
             total_reward += result["reward"]

@@ -43,6 +43,7 @@ class LiberoTaskEnv:
         self.closed = False
         self.observation = None
         self.last_info = {}
+        self.last_done = False
 
         benchmark_dict = benchmark.get_benchmark_dict()
         if self.suite_name not in benchmark_dict:
@@ -132,6 +133,7 @@ class LiberoTaskEnv:
         observation, reward, done, info = self.env.step(action)
         self.observation = observation
         self.last_info = info if isinstance(info, dict) else {}
+        self.last_done = bool(done)
         self.total_steps += 1
         return observation, float(reward), bool(done), self.last_info
 
@@ -155,6 +157,7 @@ class LiberoTaskEnv:
             self.init_states[self.init_state_id]
         )
         self.last_info = {}
+        self.last_done = False
         self.rollout_steps = 0
 
         neutral_action = np.zeros(self.action_dim, dtype=np.float32)
