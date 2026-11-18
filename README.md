@@ -30,7 +30,7 @@ MuJoCo 2.3.7 是本项目为 robosuite 1.4.0 增加的兼容性 pin；如果升�
 conda env create -f environment.yml
 conda activate libero-saycan
 
-cd /mnt/data2/zhiyu/embodied-lab/mujoco_libero
+cd /mnt/data2/zhiyu/embodied-lab/mojoco_libero
 bash scripts/install_libero.sh
 ~~~
 
@@ -96,7 +96,7 @@ outputs/smoke/libero_spatial_task0_init0/
 ## 5. 代码结构
 
 ~~~text
-mujoco_libero/
+mojoco_libero/
 ├── libero_saycan/
 │   ├── __init__.py
 │   ├── bootstrap.py       # LIBERO 路径配置与 EGL 初始化
