@@ -117,20 +117,134 @@ mojoco_libero/
 └── README.md
 ~~~
 
-## 6. 当前阶段边界与后续路线
+## 6. SayCan architecture and current implementation
 
-当前阶段完成的是 LIBERO simulator adapter，不是完整 SayCan 复现，也不包含可执行的通用机械臂技能。
+This repository contains the Stage 2–6 implementation layers. It is an engineering baseline built on LIBERO simulator ground truth and deterministic motion primitives; it is not a reproduction of the original paper's learned affordance value functions, nor a trained visuomotor policy.
 
-后续按以下顺序开发：
+### Stage 2 — BDDL task semantics and BeliefState
 
-1. **Stage 1 — LIBERO 环境接入（当前）**：suite/task 加载、固定初始状态、观测、step、成功判定、GIF 和 JSON。
-2. **Stage 2 — 状态与任务语义适配**：解析 BDDL task、对象/fixture、初始状态与 goal predicates；建立统一 BeliefState。
-3. **Stage 3 — SayCan Planner**：接入 Qwen relevance scorer，生成多个候选技能，计算 Say × Can 并记录每轮决策。
-4. **Stage 4 — 可执行技能库**：先实现并验证 Pick / Place，再扩展 Open / Close / PutOn / PutInside 等任务所需技能；低层控制由 LIBERO/robosuite action 接口执行。
-5. **Stage 5 — 动态重规划**：执行失败后刷新观测与 belief，重新生成候选技能。
-6. **Stage 6 — 基准评测**：固定 task、initial-state、seed 和 episode budget，统计成功率、步骤数、规划请求数和失败类型。
+- Reads LIBERO's parsed BDDL problem: movable object categories, fixture categories, named regions, initial predicates, goal predicates and objects of interest.
+- Normalizes supported predicates (currently `on`, `in`, `open`, `close`, `turnon`, `turnoff`) into typed records.
+- Builds a unified `BeliefState` with object/site positions, articulation state, robot end-effector state, held-object estimate, goal predicate status, revision counter and last failure.
+- The current state snapshot is simulator-side ground truth. It is not camera-only perception; do not describe it as a learned visual belief model.
 
-LIBERO 的任务初始状态文件可用于固定初始条件；人类示范 HDF5 数据集是训练/示范分析所需的独立下载项，不是运行本仓库第一个环境 smoke test 的前置条件。
+### Stage 3 — Qwen + SayCan planner
+
+- Uses DashScope's OpenAI-compatible endpoint. Configure `DASHSCOPE_API_KEY` (or `QWEN_API_KEY`), optionally `QWEN_MODEL` and `QWEN_BASE_URL`.
+- Generates candidate skills from the earliest unsatisfied BDDL goals and a bounded look-ahead.
+- Qwen returns one semantic relevance score per candidate; a separate deterministic Can evaluator checks state preconditions and reachability.
+- Combines them as `score = Say × Can`, logs every candidate and selected action.
+- `--scorer keyword` is an explicit offline baseline; it is never silently substituted for Qwen.
+
+### Stage 4 — Skill library
+
+Implemented high-level skills:
+
+| Skill | Execution / verification |
+|---|---|
+| `Pick` | Panda OSC_POSE approach, descend, close gripper, lift; verifies object height change |
+| `PutOn` | Computes a target pose, releases the held object, verifies the BDDL `on` predicate |
+| `PutInside` | Opens articulated container first when needed, places into the BDDL region and verifies `in` |
+| `Open` / `Close` | Approaches an articulation handle and moves along a joint-derived handle path; verifies state |
+| `TurnOn` / `TurnOff` | Uses articulation metadata and checks the corresponding fixture state |
+| `Push` | Contact-height push toward a target region; verifies the BDDL `on` predicate |
+| `Done` | Calls the official LIBERO success check |
+
+These are geometric closed-loop primitives, not general-purpose motion planning. A task may fail because a grasp pose, handle estimate, placement point, collision-free path or Can threshold is unsuitable for that asset. Such failures should be recorded and used to improve the relevant skill rather than reported as benchmark success.
+
+### Stage 5 — Dynamic replanning
+
+- Refreshes the simulator snapshot and all BDDL goal predicates before each planning round and after skill execution.
+- Records pre/post belief, Say, Can, combined score, execution result and retry count.
+- Failed skills increment a per-skill retry counter; the planner excludes a repeatedly failing candidate after the configured retry budget and regenerates candidates from the updated state.
+- The planner terminates on official LIBERO success, no feasible candidate, or the maximum planning-round budget.
+
+### Stage 6 — Official suite evaluation
+
+The evaluator supports `libero_spatial`, `libero_object`, `libero_goal`, `libero_90` and `libero_10`. It writes per-episode JSON, per-suite JSON summaries, aggregate JSON and CSV. Use a small task subset first; full-suite evaluation can take substantial time and will make many Qwen API calls.
+
+## 7. Running Qwen-SayCan
+
+Set the API key in the shell; do not commit it to Git:
+
+~~~bash
+export DASHSCOPE_API_KEY="YOUR_DASHSCOPE_API_KEY"
+export QWEN_MODEL="qwen-plus"
+# Optional:
+# export QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+~~~
+
+Run one official task:
+
+~~~bash
+python scripts/run_saycan_libero.py \
+  --suite libero_spatial \
+  --task-id 0 \
+  --init-state-id 0 \
+  --scorer qwen \
+  --max-rounds 40 \
+  --render-gpu-device-id 0
+~~~
+
+Offline planner smoke test (no API key):
+
+~~~bash
+python scripts/run_saycan_libero.py \
+  --suite libero_spatial \
+  --task-id 0 \
+  --init-state-id 0 \
+  --scorer keyword \
+  --max-rounds 40 \
+  --render-gpu-device-id 0
+~~~
+
+A keyword-baseline success is not a Qwen result. A successful episode is only counted when the official LIBERO success predicate returns true.
+
+## 8. Running evaluations
+
+Start with a single task and one fixed initial state:
+
+~~~bash
+python scripts/evaluate_suite.py \
+  --suite libero_spatial \
+  --task-ids 0 \
+  --episodes-per-task 1 \
+  --scorer keyword \
+  --task-limit 1 \
+  --render-gpu-device-id 0
+~~~
+
+Then run a small Qwen sample:
+
+~~~bash
+python scripts/evaluate_suite.py \
+  --suite libero_spatial \
+  --task-ids 0,1,2 \
+  --episodes-per-task 2 \
+  --scorer qwen \
+  --render-gpu-device-id 0
+~~~
+
+Expand suite-by-suite only after inspecting failures and trajectory GIFs:
+
+~~~bash
+python scripts/evaluate_suite.py --suite libero_spatial --scorer qwen
+python scripts/evaluate_suite.py --suite libero_object --scorer qwen
+python scripts/evaluate_suite.py --suite libero_goal --scorer qwen
+python scripts/evaluate_suite.py --suite libero_90 --scorer qwen
+python scripts/evaluate_suite.py --suite libero_10 --scorer qwen
+~~~
+
+For a quick coverage check without spending API quota, use `--scorer keyword` first. Keep Qwen and keyword results in separate output directories when comparing them.
+
+## 9. Verification status and limitations
+
+- Unit tests cover BDDL predicate flattening, task-spec extraction, candidate generation, Qwen response validation, metrics and failed-skill replanning.
+- Static unit tests do not prove MuJoCo contacts, grasping, articulation or placement work in a real LIBERO episode.
+- The LIBERO simulator, EGL renderer, physical skills and official suites must be smoke-tested on the target A40 server before claiming end-to-end success.
+- The current Can evaluator is rule-based and uses simulator state; the original SayCan paper's affordance/value functions are learned from robot interaction data.
+- Current skills use direct geometric waypoints and do not provide general collision-aware motion planning or camera-only perception.
+- Report success rate only from `env.check_success()`; distinguish infrastructure errors, no-feasible-skill, max-rounds and physical skill failures.
 
 ## 7. 参考资料
 
