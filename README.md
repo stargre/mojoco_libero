@@ -13,7 +13,7 @@
 | Component | Version |
 |---|---:|
 | Python | 3.8.13 |
-| LIBERO | official master |
+| LIBERO | commit 8f1084e3132a |
 | robosuite | 1.4.0 |
 | MuJoCo | 2.3.7 |
 | NumPy | 1.22.4 |
@@ -34,7 +34,7 @@ cd /mnt/data2/zhiyu/embodied-lab/mojoco_libero
 bash scripts/install_libero.sh
 ~~~
 
-安装脚本会把官方 LIBERO clone 到 third_party/LIBERO（该目录已加入 .gitignore），安装官方 requirements、MuJoCo/PyTorch 兼容版本，并以 editable 模式安装 LIBERO 和本项目。
+安装脚本会把官方 LIBERO 固定版本 clone 到 third_party/LIBERO（该目录已加入 .gitignore），安装官方 requirements、MuJoCo/PyTorch 兼容版本，并以 editable 模式安装 LIBERO 和本项目。
 
 如果服务器没有 EGL/OpenGL 开发运行库，需要先由管理员安装系统依赖。运行前设置：
 

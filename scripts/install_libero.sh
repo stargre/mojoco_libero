@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)"
 LIBERO_DIR="$ROOT_DIR/third_party/LIBERO"
+LIBERO_COMMIT=8f1084e3132a39270c3a13ebe37270a43ece2a01
 PYTHON_BIN=python
 PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
 
@@ -25,6 +26,10 @@ if [[ ! -d "$LIBERO_DIR/.git" ]]; then
 else
   echo "Using existing LIBERO checkout: $LIBERO_DIR"
 fi
+
+# Pin the exact upstream source revision used for this integration.
+git -C "$LIBERO_DIR" fetch --depth 1 origin "$LIBERO_COMMIT"
+git -C "$LIBERO_DIR" checkout --detach "$LIBERO_COMMIT"
 
 "$PYTHON_BIN" -m pip install --upgrade "pip<25" -i "$PYPI_MIRROR"
 "$PYTHON_BIN" -m pip install -r "$LIBERO_DIR/requirements.txt" -i "$PYPI_MIRROR"
