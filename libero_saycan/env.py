@@ -461,6 +461,7 @@ class LiberoTaskEnv:
             "joint_name": joint_name,
             "joint_id": int(joint_id),
             "joint_type": int(model.jnt_type[joint_id]),
+            "joint_kind": "slide" if int(model.jnt_type[joint_id]) == int(mujoco.mjtJoint.mjJNT_SLIDE) else "hinge",
             "body_id": body_id,
             "qpos_address": qpos_address,
             "current_qpos": current_qpos,
@@ -479,7 +480,7 @@ class LiberoTaskEnv:
         delta = float(target_qpos) - float(info["current_qpos"])
         handle = np.asarray(info["handle_position"], dtype=float)
         axis = np.asarray(info["axis_world"], dtype=float)
-        if int(info["joint_type"]) == 2:  # MuJoCo slide joint
+        if info.get("joint_kind") == "slide":
             return handle + axis * delta
         # MuJoCo hinge joint: rotate the handle around the joint anchor.
         anchor = np.asarray(info["anchor_world"], dtype=float)

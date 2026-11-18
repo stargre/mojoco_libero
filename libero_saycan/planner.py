@@ -52,7 +52,8 @@ class CandidateGenerator:
                     and parent_state.get("is_open") is False
                 )
                 if name == "in" and (closed_target or closed_parent) and belief.held_object is None:
-                    generated.append(("Open", {"target": target_name}))
+                    open_target = target_name if closed_target else parent_name
+                    generated.append(("Open", {"target": open_target}))
                 elif belief.held_object == object_name:
                     skill = "PutInside" if name == "in" else "PutOn"
                     generated.append((
@@ -61,6 +62,10 @@ class CandidateGenerator:
                     ))
                 elif belief.held_object is None:
                     generated.append(("Pick", {"object": object_name}))
+                    category = spec.category(object_name).lower()
+                    instruction = spec.instruction.lower()
+                    if name == "on" and ("plate" in category or "push" in instruction):
+                        generated.append(("Push", {"object": object_name, "target": target_name}))
 
             elif name in ("open", "close", "turnon", "turnoff") and args:
                 skill = {

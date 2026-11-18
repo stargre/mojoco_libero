@@ -11,7 +11,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from libero.libero import benchmark
 from libero_saycan.agent import LiberoSayCanAgent
 from libero_saycan.bootstrap import configure_libero
 from libero_saycan.env import LiberoTaskEnv
@@ -70,6 +69,7 @@ def main():
     args = parser.parse_args()
 
     configure_libero()
+    from libero.libero import benchmark
     registry = benchmark.get_benchmark_dict()
     suites = ALL_SUITES if args.suite == "all" else [args.suite]
     output_root = Path(args.output)
